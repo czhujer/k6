@@ -5,3 +5,6 @@ xk6_0.6.1_mac_arm64/
 xk6-output-prometheus-remote/
 .DS_Store
 database.db
+/demos/02-examples/node_modules/
+/demos/02-examples/npmlibs/
+/demos/01-sandbox/node_modules/

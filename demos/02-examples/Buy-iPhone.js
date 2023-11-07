@@ -8,13 +8,15 @@
  */
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/includes
-// https://github.com/cheeriojs/cheerio#cheerio
 
 import {sleep, group, check} from 'k6'
 import http from 'k6/http'
 import { Gauge } from "k6/metrics";
-import { parseHTML } from 'k6/html';
-// import * as cheerio from 'cheerio';
+// import { parseHTML } from 'k6/html';
+// https://github.com/cheeriojs/cheerio#cheerio
+// npm install browserify cheerio # there (ignore the npm warnings about missing package.json or description)
+// mkdir -p npmlibs && ./node_modules/.bin/browserify ./node_modules/cheerio/ -s cheerio > npmlibs/cheerio.js
+import cheerio from "./npmlibs/cheerio.js";
 
 // https://k6.io/docs/using-k6/metrics/create-custom-metrics/
 const suggesterReturnedItems = new Gauge('suggester_returned_items');
@@ -40,7 +42,7 @@ export const options = {
         iwantUserJourney: {
             executor: 'constant-vus',
             vus: 1,
-            duration: '30s',
+            duration: '10s',
         },
     },
 }
@@ -49,6 +51,8 @@ export default function main() {
     let response
     let doc
     let pageTitle
+    let $
+    let checkKeyword
 
     group('page_0 - iwant homepage', function () {
         response = http.get('https://www.iwant.cz/', {
@@ -117,11 +121,14 @@ export default function main() {
                 },
             }
         )
-        const matches = response.body.match(/<div class="productList-item"/g);
+        // const productListItem = response.body.match(/<div class="productList-item"/g);
+        $ = cheerio.load(response.body);
+        const productListItem = $('div.productList-item');
         // console.log(`DEBUG: productList items: ${matches.length}`)
+
         check(response, {
             'status was 200': (r) => r.status === 200,
-            'found 12 items': matches.length === 12,
+            'found 12 items': productListItem.length === 12,
         })
 
         response = http.get('https://www.iwant.cz/Products/Filter/AllFilterData', {
@@ -165,9 +172,12 @@ export default function main() {
                 },
             })
 
-            doc = parseHTML(response.body); // equivalent to res.html()
-            pageTitle = doc.find('head title').text();
+            // doc = parseHTML(response.body); // equivalent to res.html()
+            // pageTitle = doc.find('head title').text();
             // console.log(`DEBUG: pageTitle: "${pageTitle}"`)
+
+            $ = cheerio.load(response.body);
+            pageTitle = $('head title').text()
 
             check(response,
                 {
@@ -187,11 +197,12 @@ export default function main() {
                     },
                 }
             )
+            $ = cheerio.load(response.body);
+            checkKeyword = $('p.copy.z9b16b1.channel-custom-font-custom-80-headline-super').text();
 
             check(response, {
                 'status was 200': (r) => r.status === 200,
-                'model details keyword found':
-                    (r) => r.body.includes('<p class="copy z9b16b1 channel-custom-font-custom-80-headline-super">Multitalent.</p>')
+                'model details keyword found': checkKeyword === "Multitalent."
             })
 
             sleep(1)
@@ -208,11 +219,13 @@ export default function main() {
                 },
             })
 
-            doc = parseHTML(response.body); // equivalent to res.html()
-            pageTitle = doc.find('head title').text();
+            // doc = parseHTML(response.body); // equivalent to res.html()
+            // pageTitle = doc.find('head title').text();
             // console.log(`DEBUG: pageTitle: "${pageTitle}"`)
+            $ = cheerio.load(response.body);
+            pageTitle = $('head title').text()
 
-            check(response,
+            check(response,!
                 {
                     'status was 200': (r) => r.status === 200,
                     'particular iphone model found': pageTitle === "Apple iPhone 14 256GB temně inkoustový | iWant.cz"
@@ -231,10 +244,13 @@ export default function main() {
                     },
                 }
             )
+
+            $ = cheerio.load(response.body);
+            checkKeyword = $('p.copy.z9b16b1.channel-custom-font-custom-80-headline-super').text();
+
             check(response, {
                 'status was 200': (r) => r.status === 200,
-                'model details keyword found':
-                    (r) => r.body.includes('<p class="copy z9b16b1 channel-custom-font-custom-80-headline-super">Multitalent.</p>')
+                'model details keyword found': checkKeyword === "Multitalent."
             })
 
             sleep(1)
