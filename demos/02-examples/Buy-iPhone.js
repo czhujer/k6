@@ -49,7 +49,6 @@ export const options = {
 
 export default function main() {
     let response
-    let doc
     let pageTitle
     let $
     let checkKeyword
